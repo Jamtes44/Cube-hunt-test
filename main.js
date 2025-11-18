@@ -38,8 +38,19 @@ const hudTexture = new THREE.CanvasTexture(hudCanvas);
 const hudMaterial = new THREE.MeshBasicMaterial({ map: hudTexture, transparent: true });
 const hudGeometry = new THREE.PlaneGeometry(2, 1);
 const hudMesh = new THREE.Mesh(hudGeometry, hudMaterial);
-hudMesh.position.set(0, 0, -1); // frente a la cámara
-camera.add(hudMesh); // añadir como hijo de la cámara para que se mueva con ella
+scene.add(hudMesh); // añadir a la escena para que sea visible en VR y no-VR
+
+// Añadir líneas de guía para el HUD
+const lineMaterial = new THREE.LineBasicMaterial({ color: 0xffffff });
+const lineGeometry = new THREE.BufferGeometry().setFromPoints([
+  new THREE.Vector3(-1, -0.5, -1),
+  new THREE.Vector3(1, -0.5, -1),
+  new THREE.Vector3(1, 0.5, -1),
+  new THREE.Vector3(-1, 0.5, -1),
+  new THREE.Vector3(-1, -0.5, -1)
+]);
+const line = new THREE.Line(lineGeometry, lineMaterial);
+hudMesh.add(line); // añadir líneas al HUD
 
 let score = 0;
 
@@ -109,6 +120,7 @@ function disparo(cube) {
   cube.material.transparent = true;
   cube.material.opacity = 1;
   cube.fadeStart = Date.now();
+  score++; // incrementar score al disparar
   // Detener movimiento
   cube.position.x = cube.position.x;
   cube.position.y = cube.position.y;
@@ -175,4 +187,45 @@ window.addEventListener('resize', () => {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+// Evento de clic para disparar (desktop)
+window.addEventListener('click', handleShoot);
+
+// Para VR, añadir interacción con raycaster
+renderer.xr.addEventListener('sessionstart', () => {
+  // Añadir controllers para VR
+  const controller1 = renderer.xr.getController(0);
+  controller1.addEventListener('select', () => {
+    const origin = new THREE.Vector3();
+    const direction = new THREE.Vector3();
+    controller1.getWorldPosition(origin);
+    controller1.getWorldDirection(direction);
+    raycaster.set(origin, direction);
+    const intersects = raycaster.intersectObjects(flyingCubes);
+    if (intersects.length > 0) {
+      const cube = intersects[0].object;
+      if (!cube.isShot) {
+        disparo(cube);
+      }
+    }
+  });
+  scene.add(controller1);
+
+  const controller2 = renderer.xr.getController(1);
+  controller2.addEventListener('select', () => {
+    const origin = new THREE.Vector3();
+    const direction = new THREE.Vector3();
+    controller2.getWorldPosition(origin);
+    controller2.getWorldDirection(direction);
+    raycaster.set(origin, direction);
+    const intersects = raycaster.intersectObjects(flyingCubes);
+    if (intersects.length > 0) {
+      const cube = intersects[0].object;
+      if (!cube.isShot) {
+        disparo(cube);
+      }
+    }
+  });
+  scene.add(controller2);
 });
