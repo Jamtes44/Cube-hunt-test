@@ -52,17 +52,17 @@ loader.load(
 );
 
 // Cubo volador
-const cubeGeometry = new THREE.BoxGeometry(0.2, 0.2, 0.2  );
+const cubeGeometry = new THREE.BoxGeometry(1, 1, 1  );
 const cubeMaterial = new THREE.MeshLambertMaterial({ color: 0x00ff00 });
 const flyingCube = new THREE.Mesh(cubeGeometry, cubeMaterial);
-flyingCube.position.set(0, 2, -2);
+flyingCube.position.set(0, 1.6, -2);
 flyingCube.isShot = false;
 scene.add(flyingCube);
 
 // Función volar para el cubo
 function volar() {
   if (!flyingCube.isShot) {
-    flyingCube.position.x = Math.sin(Date.now() * 0.0005) * 10;
+    flyingCube.position.x = Math.sin(Date.now() * 0.0005) * 3;
     flyingCube.position.y += Math.sin(Date.now() * 0.002) * 0.01;
     flyingCube.rotation.z += 0.01;
   }
@@ -74,6 +74,11 @@ function disparo() {
   flyingCube.material.color.set(0xff0000);
   flyingCube.material.transparent = true;
   flyingCube.material.opacity = 1;
+  flyingCube.fadeStart = Date.now();
+  // Detener movimiento
+  flyingCube.position.x = flyingCube.position.x; // mantener posición actual
+  flyingCube.position.y = flyingCube.position.y;
+  flyingCube.rotation.z = flyingCube.rotation.z;
 }
 
 // Animación
