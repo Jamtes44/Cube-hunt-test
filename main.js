@@ -63,6 +63,7 @@ for (let i = 0; i < 3; i++) {
   const cubeMaterial = new THREE.MeshLambertMaterial({ color: 0x00ff00 });
   const cube = new THREE.Mesh(cubeGeometry, cubeMaterial);
   cube.position.set((i - 1) * 2, 1.6, -2); // posiciones -2, 0, 2 en x
+  cube.initialPosition = cube.position.clone(); // guardar posición inicial
   cube.isShot = false;
   cube.offset = i * Math.PI / 3; // fase diferente para cada cubo
   flyingCubes.push(cube);
@@ -143,9 +144,9 @@ renderer.xr.addEventListener('sessionstart', () => {
   // Añadir controllers para VR
   const controller1 = renderer.xr.getController(0);
   controller1.addEventListener('select', () => {
-    tempMatrix.identity().extractRotation(controller1.matrixWorld);
-    raycaster.ray.origin.setFromMatrixPosition(controller1.matrixWorld);
-    raycaster.ray.direction.set(0, 0, -1).applyMatrix4(tempMatrix);
+    const direction = new THREE.Vector3();
+    controller1.getWorldDirection(direction);
+    raycaster.set(controller1.position, direction);
     const intersects = raycaster.intersectObjects(flyingCubes);
     if (intersects.length > 0) {
       const cube = intersects[0].object;
@@ -158,9 +159,9 @@ renderer.xr.addEventListener('sessionstart', () => {
 
   const controller2 = renderer.xr.getController(1);
   controller2.addEventListener('select', () => {
-    tempMatrix.identity().extractRotation(controller2.matrixWorld);
-    raycaster.ray.origin.setFromMatrixPosition(controller2.matrixWorld);
-    raycaster.ray.direction.set(0, 0, -1).applyMatrix4(tempMatrix);
+    const direction = new THREE.Vector3();
+    controller2.getWorldDirection(direction);
+    raycaster.set(controller2.position, direction);
     const intersects = raycaster.intersectObjects(flyingCubes);
     if (intersects.length > 0) {
       const cube = intersects[0].object;
