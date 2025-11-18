@@ -144,9 +144,11 @@ renderer.xr.addEventListener('sessionstart', () => {
   // Añadir controllers para VR
   const controller1 = renderer.xr.getController(0);
   controller1.addEventListener('select', () => {
+    const origin = new THREE.Vector3();
     const direction = new THREE.Vector3();
+    controller1.getWorldPosition(origin);
     controller1.getWorldDirection(direction);
-    raycaster.set(controller1.position, direction);
+    raycaster.set(origin, direction);
     const intersects = raycaster.intersectObjects(flyingCubes);
     if (intersects.length > 0) {
       const cube = intersects[0].object;
@@ -159,9 +161,11 @@ renderer.xr.addEventListener('sessionstart', () => {
 
   const controller2 = renderer.xr.getController(1);
   controller2.addEventListener('select', () => {
+    const origin = new THREE.Vector3();
     const direction = new THREE.Vector3();
+    controller2.getWorldPosition(origin);
     controller2.getWorldDirection(direction);
-    raycaster.set(controller2.position, direction);
+    raycaster.set(origin, direction);
     const intersects = raycaster.intersectObjects(flyingCubes);
     if (intersects.length > 0) {
       const cube = intersects[0].object;
