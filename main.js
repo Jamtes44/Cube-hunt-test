@@ -4,7 +4,7 @@ const scene = new THREE.Scene();
 
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
 camera.position.set(0, 0, 5);
-camera.lookAt(0, 0, 0);
+camera.lookAt(0, 0, -5);
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
@@ -82,16 +82,18 @@ function initVRControllers() {
     controller2.addEventListener('selectstart', onSelectStart);
     scene.add(controller2);
 
-    // Líneas de rayo para feedback visual
-    const geometry = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, -1)]);
-    const material = new THREE.LineBasicMaterial({ color: 0xffffff });
-    const line1 = new THREE.Line(geometry, material);
-    line1.scale.z = 5;
-    controller1.add(line1.clone());
+    // Líneas de rayo para feedback visual (solo en VR)
+    if (renderer.xr.isPresenting) {
+        const geometry = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, -1)]);
+        const material = new THREE.LineBasicMaterial({ color: 0xffffff });
+        const line1 = new THREE.Line(geometry, material);
+        line1.scale.z = 5;
+        controller1.add(line1.clone());
 
-    const line2 = new THREE.Line(geometry, material);
-    line2.scale.z = 5;
-    controller2.add(line2.clone());
+        const line2 = new THREE.Line(geometry, material);
+        line2.scale.z = 5;
+        controller2.add(line2.clone());
+    }
 }
 
 // Eventos para controladores VR
@@ -209,14 +211,13 @@ function resetGame() {
 function startRound() {
     console.log(`Ronda ${currentRound}`);
     document.getElementById('round').textContent = currentRound;
-    roundStartTime = Date.now();
     greenCubes = [];
-    
+
     for (let i = 0; i < cubesPerRound; i++) {
         const greenCubeGeometry = new THREE.BoxGeometry(0.5, 0.5, 0.5);
         const greenCubeMaterial = new THREE.MeshLambertMaterial({ color: 0x00ff00 });
         const greenCube = new THREE.Mesh(greenCubeGeometry, greenCubeMaterial);
-        greenCube.position.set(Math.random() * 12 - 6, Math.random() * 6 + 1, 0);
+        greenCube.position.set(Math.random() * 12 - 6, Math.random() * 6 + 1, Math.random() * 4 - 2);
         greenCube.spawnTime = Date.now();
         scene.add(greenCube);
         greenCubes.push(greenCube);
@@ -231,6 +232,7 @@ function volar() {
             const time = Date.now() * 0.001 + cube.position.x * 0.1;
             cube.position.x += Math.sin(time) * 0.01 * speedMultiplier;
             cube.position.y += Math.sin(time * 1.1) * 0.01 * speedMultiplier;
+            cube.position.z += Math.sin(time * 0.9) * 0.005 * speedMultiplier;
         }
     });
 }
