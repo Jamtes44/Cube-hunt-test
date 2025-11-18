@@ -6,7 +6,8 @@ import { OBJLoader } from "https://unpkg.com/three@0.160.0/examples/jsm/loaders/
 // Escena, cámara, renderer
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-camera.position.set(0, 1.6, 0);
+camera.position.set(0, 1.6, 2);
+camera.lookAt(new THREE.Vector3(0, 0, -3));
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
@@ -31,12 +32,24 @@ const cubeTexture = cubeTextureLoader.load([
 ]);
 scene.background = cubeTexture;
 
-// Objeto básico en la escena (un cubo)
-const geometry = new THREE.BoxGeometry(1, 1, 1);
-const material = new THREE.MeshLambertMaterial({ color: 0x00ff00 });
-const cube = new THREE.Mesh(geometry, material);
-cube.position.set(0, 1.6, -2);
-scene.add(cube);
+// Cargar modelo OBJ (bosque)
+const loader = new OBJLoader();
+loader.load(
+  'modelos/bosque.obj',
+  (obj) => {
+    obj.position.set(0, -4, -4);
+    obj.scale.set(1.5, 1.5, 1.5);
+    obj.rotation.y = Math.PI / 2;
+    obj.traverse((child) => {
+      if (child.isMesh) {
+        child.material = new THREE.MeshLambertMaterial({ color: 0x00ff00 });
+      }
+    });
+    scene.add(obj);
+  },
+  undefined,
+  (err) => console.warn('Error cargando OBJ:', err)
+);
 
 // Animación
 function animate() {
