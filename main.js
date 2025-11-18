@@ -37,7 +37,7 @@ const loader = new OBJLoader();
 loader.load(
   'modelos/bosque.obj',
   (obj) => {
-    obj.position.set(0, -4, -4);
+    obj.position.set(0, -3, -4);
     obj.scale.set(1.5, 1.5, 1.5);
     obj.rotation.y = Math.PI / 2;
     obj.traverse((child) => {
@@ -51,8 +51,23 @@ loader.load(
   (err) => console.warn('Error cargando OBJ:', err)
 );
 
+// Cubo volador
+const cubeGeometry = new THREE.BoxGeometry(0.2, 0.2, 0.2  );
+const cubeMaterial = new THREE.MeshLambertMaterial({ color: 0x00ff00 });
+const flyingCube = new THREE.Mesh(cubeGeometry, cubeMaterial);
+flyingCube.position.set(0, 2, -2);
+scene.add(flyingCube);
+
+// Función volar para el cubo
+function volar() {
+  flyingCube.position.x = Math.sin(Date.now() * 0.001) * 10;
+  flyingCube.position.y += Math.sin(Date.now() * 0.005) * 0.01;
+  flyingCube.rotation.z += 0.02;
+}
+
 // Animación
 function animate() {
+    volar();
     renderer.render(scene, camera);
 }
 
