@@ -56,18 +56,39 @@ const cubeGeometry = new THREE.BoxGeometry(0.2, 0.2, 0.2  );
 const cubeMaterial = new THREE.MeshLambertMaterial({ color: 0x00ff00 });
 const flyingCube = new THREE.Mesh(cubeGeometry, cubeMaterial);
 flyingCube.position.set(0, 2, -2);
+flyingCube.isShot = false;
 scene.add(flyingCube);
 
 // Función volar para el cubo
 function volar() {
-  flyingCube.position.x = Math.sin(Date.now() * 0.001) * 10;
-  flyingCube.position.y += Math.sin(Date.now() * 0.005) * 0.01;
-  flyingCube.rotation.z += 0.02;
+  if (!flyingCube.isShot) {
+    flyingCube.position.x = Math.sin(Date.now() * 0.0005) * 10;
+    flyingCube.position.y += Math.sin(Date.now() * 0.002) * 0.01;
+    flyingCube.rotation.z += 0.01;
+  }
+}
+
+// Función disparo
+function disparo() {
+  flyingCube.isShot = true;
+  flyingCube.material.color.set(0xff0000);
+  flyingCube.material.transparent = true;
+  flyingCube.material.opacity = 1;
 }
 
 // Animación
 function animate() {
     volar();
+    // Fade out del cubo disparado
+    if (flyingCube.isShot) {
+      const elapsed = (Date.now() - flyingCube.fadeStart) / 1000;
+      const fadeDur = 2.0; // duración del fade en segundos
+      if (elapsed < fadeDur) {
+        flyingCube.material.opacity = 1 - (elapsed / fadeDur);
+      } else {
+        scene.remove(flyingCube);
+      }
+    }
     renderer.render(scene, camera);
 }
 
@@ -79,4 +100,16 @@ window.addEventListener('resize', () => {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+// Evento de clic para disparar al cubo
+window.addEventListener('click', (event) => {
+  if (!flyingCube.isShot) {
+    disparo();
+  }
+});
+
+// Para VR, añadir interacción con raycaster (simplificado)
+renderer.xr.addEventListener('sessionstart', () => {
+  // Aquí se podría añadir lógica para VR controllers, pero por simplicidad usamos clic
 });
