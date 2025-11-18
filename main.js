@@ -22,6 +22,27 @@ const raycaster = new THREE.Raycaster();
 const tempMatrix = new THREE.Matrix4();
 const mouse = new THREE.Vector2();
 
+// HUD para VR
+const hudCanvas = document.createElement('canvas');
+hudCanvas.width = 512;
+hudCanvas.height = 256;
+const hudCtx = hudCanvas.getContext('2d');
+hudCtx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+hudCtx.fillRect(0, 0, hudCanvas.width, hudCanvas.height);
+hudCtx.fillStyle = 'white';
+hudCtx.font = '48px Arial';
+hudCtx.textAlign = 'center';
+hudCtx.fillText('Cubos golpeados: 0', hudCanvas.width / 2, hudCanvas.height / 2);
+
+const hudTexture = new THREE.CanvasTexture(hudCanvas);
+const hudMaterial = new THREE.MeshBasicMaterial({ map: hudTexture, transparent: true });
+const hudGeometry = new THREE.PlaneGeometry(2, 1);
+const hudMesh = new THREE.Mesh(hudGeometry, hudMaterial);
+hudMesh.position.set(0, 0, -1); // frente a la cámara
+camera.add(hudMesh); // añadir como hijo de la cámara para que se mueva con ella
+
+let score = 0;
+
 // Luces
 const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
 scene.add(ambientLight);
@@ -108,9 +129,22 @@ function handleShoot(event) {
   }
 }
 
+// Función para actualizar HUD
+function updateHUD() {
+  hudCtx.clearRect(0, 0, hudCanvas.width, hudCanvas.height);
+  hudCtx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+  hudCtx.fillRect(0, 0, hudCanvas.width, hudCanvas.height);
+  hudCtx.fillStyle = 'white';
+  hudCtx.font = '48px Arial';
+  hudCtx.textAlign = 'center';
+  hudCtx.fillText(`Cubos golpeados: ${score}`, hudCanvas.width / 2, hudCanvas.height / 2);
+  hudTexture.needsUpdate = true;
+}
+
 // Animación
 function animate() {
     volar();
+    updateHUD(); // actualizar HUD cada frame
     // Fade out del cubo disparado
     flyingCubes.forEach(cube => {
       if (cube.isShot) {
@@ -119,7 +153,14 @@ function animate() {
         if (elapsed < fadeDur) {
           cube.material.opacity = 1 - (elapsed / fadeDur);
         } else {
-          scene.remove(cube);
+          // regenerar cubo
+          cube.position.copy(cube.initialPosition);
+          cube.material.color.set(0x00ff00);
+          cube.material.opacity = 1;
+          cube.material.transparent = false;
+          cube.isShot = false;
+          cube.fadeStart = null;
+          scene.add(cube); // añadir de nuevo si fue removido
         }
       }
     });
@@ -134,45 +175,4 @@ window.addEventListener('resize', () => {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
-});
-
-// Evento de clic para disparar (desktop)
-window.addEventListener('click', handleShoot);
-
-// Para VR, añadir interacción con raycaster
-renderer.xr.addEventListener('sessionstart', () => {
-  // Añadir controllers para VR
-  const controller1 = renderer.xr.getController(0);
-  controller1.addEventListener('select', () => {
-    const origin = new THREE.Vector3();
-    const direction = new THREE.Vector3();
-    controller1.getWorldPosition(origin);
-    controller1.getWorldDirection(direction);
-    raycaster.set(origin, direction);
-    const intersects = raycaster.intersectObjects(flyingCubes);
-    if (intersects.length > 0) {
-      const cube = intersects[0].object;
-      if (!cube.isShot) {
-        disparo(cube);
-      }
-    }
-  });
-  scene.add(controller1);
-
-  const controller2 = renderer.xr.getController(1);
-  controller2.addEventListener('select', () => {
-    const origin = new THREE.Vector3();
-    const direction = new THREE.Vector3();
-    controller2.getWorldPosition(origin);
-    controller2.getWorldDirection(direction);
-    raycaster.set(origin, direction);
-    const intersects = raycaster.intersectObjects(flyingCubes);
-    if (intersects.length > 0) {
-      const cube = intersects[0].object;
-      if (!cube.isShot) {
-        disparo(cube);
-      }
-    }
-  });
-  scene.add(controller2);
 });
