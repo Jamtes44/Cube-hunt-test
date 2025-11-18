@@ -17,6 +17,11 @@ document.body.appendChild(renderer.domElement);
 // Añadir VRButton
 document.body.appendChild(VRButton.createButton(renderer));
 
+// Raycaster y vectores auxiliares
+const raycaster = new THREE.Raycaster();
+const tempMatrix = new THREE.Matrix4();
+const mouse = new THREE.Vector2();
+
 // Luces
 const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
 scene.add(ambientLight);
@@ -51,49 +56,72 @@ loader.load(
   (err) => console.warn('Error cargando OBJ:', err)
 );
 
-// Cubo volador
-const cubeGeometry = new THREE.BoxGeometry(1, 1, 1  );
-const cubeMaterial = new THREE.MeshLambertMaterial({ color: 0x00ff00 });
-const flyingCube = new THREE.Mesh(cubeGeometry, cubeMaterial);
-flyingCube.position.set(0, 1.6, -2);
-flyingCube.isShot = false;
-scene.add(flyingCube);
-
-// Función volar para el cubo
-function volar() {
-  if (!flyingCube.isShot) {
-    flyingCube.position.x = Math.sin(Date.now() * 0.0005) * 3;
-    flyingCube.position.y += Math.sin(Date.now() * 0.002) * 0.01;
-    flyingCube.rotation.z += 0.01;
-  }
+// Cubos voladores
+const flyingCubes = [];
+for (let i = 0; i < 3; i++) {
+  const cubeGeometry = new THREE.BoxGeometry(0.5, 0.5, 0.5);
+  const cubeMaterial = new THREE.MeshLambertMaterial({ color: 0x00ff00 });
+  const cube = new THREE.Mesh(cubeGeometry, cubeMaterial);
+  cube.position.set((i - 1) * 2, 1.6, -2); // posiciones -2, 0, 2 en x
+  cube.isShot = false;
+  cube.offset = i * Math.PI / 3; // fase diferente para cada cubo
+  flyingCubes.push(cube);
+  scene.add(cube);
 }
 
-// Función disparo
-function disparo() {
-  flyingCube.isShot = true;
-  flyingCube.material.color.set(0xff0000);
-  flyingCube.material.transparent = true;
-  flyingCube.material.opacity = 1;
-  flyingCube.fadeStart = Date.now();
+// Función volar para los cubos
+function volar() {
+  flyingCubes.forEach(cube => {
+    if (!cube.isShot) {
+      cube.position.x = Math.sin(Date.now() * 0.0005 + cube.offset) * 3;
+      cube.position.y += Math.sin(Date.now() * 0.002) * 0.01;
+      cube.rotation.z += 0.01;
+    }
+  });
+}
+
+// Función disparo (para el cubo específico)
+function disparo(cube) {
+  cube.isShot = true;
+  cube.material.color.set(0xff0000);
+  cube.material.transparent = true;
+  cube.material.opacity = 1;
+  cube.fadeStart = Date.now();
   // Detener movimiento
-  flyingCube.position.x = flyingCube.position.x; // mantener posición actual
-  flyingCube.position.y = flyingCube.position.y;
-  flyingCube.rotation.z = flyingCube.rotation.z;
+  cube.position.x = cube.position.x;
+  cube.position.y = cube.position.y;
+  cube.rotation.z = cube.rotation.z;
+}
+
+// Función para manejar disparo con raycast (desktop)
+function handleShoot(event) {
+  mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+  mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+  raycaster.setFromCamera(mouse, camera);
+  const intersects = raycaster.intersectObjects(flyingCubes);
+  if (intersects.length > 0) {
+    const cube = intersects[0].object;
+    if (!cube.isShot) {
+      disparo(cube);
+    }
+  }
 }
 
 // Animación
 function animate() {
     volar();
     // Fade out del cubo disparado
-    if (flyingCube.isShot) {
-      const elapsed = (Date.now() - flyingCube.fadeStart) / 1000;
-      const fadeDur = 2.0; // duración del fade en segundos
-      if (elapsed < fadeDur) {
-        flyingCube.material.opacity = 1 - (elapsed / fadeDur);
-      } else {
-        scene.remove(flyingCube);
+    flyingCubes.forEach(cube => {
+      if (cube.isShot) {
+        const elapsed = (Date.now() - cube.fadeStart) / 1000;
+        const fadeDur = 2.0; // duración del fade en segundos
+        if (elapsed < fadeDur) {
+          cube.material.opacity = 1 - (elapsed / fadeDur);
+        } else {
+          scene.remove(cube);
+        }
       }
-    }
+    });
     renderer.render(scene, camera);
 }
 
@@ -107,14 +135,39 @@ window.addEventListener('resize', () => {
     renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
-// Evento de clic para disparar al cubo
-window.addEventListener('click', (event) => {
-  if (!flyingCube.isShot) {
-    disparo();
-  }
-});
+// Evento de clic para disparar (desktop)
+window.addEventListener('click', handleShoot);
 
-// Para VR, añadir interacción con raycaster (simplificado)
+// Para VR, añadir interacción con raycaster
 renderer.xr.addEventListener('sessionstart', () => {
-  // Aquí se podría añadir lógica para VR controllers, pero por simplicidad usamos clic
+  // Añadir controllers para VR
+  const controller1 = renderer.xr.getController(0);
+  controller1.addEventListener('select', () => {
+    tempMatrix.identity().extractRotation(controller1.matrixWorld);
+    raycaster.ray.origin.setFromMatrixPosition(controller1.matrixWorld);
+    raycaster.ray.direction.set(0, 0, -1).applyMatrix4(tempMatrix);
+    const intersects = raycaster.intersectObjects(flyingCubes);
+    if (intersects.length > 0) {
+      const cube = intersects[0].object;
+      if (!cube.isShot) {
+        disparo(cube);
+      }
+    }
+  });
+  scene.add(controller1);
+
+  const controller2 = renderer.xr.getController(1);
+  controller2.addEventListener('select', () => {
+    tempMatrix.identity().extractRotation(controller2.matrixWorld);
+    raycaster.ray.origin.setFromMatrixPosition(controller2.matrixWorld);
+    raycaster.ray.direction.set(0, 0, -1).applyMatrix4(tempMatrix);
+    const intersects = raycaster.intersectObjects(flyingCubes);
+    if (intersects.length > 0) {
+      const cube = intersects[0].object;
+      if (!cube.isShot) {
+        disparo(cube);
+      }
+    }
+  });
+  scene.add(controller2);
 });
